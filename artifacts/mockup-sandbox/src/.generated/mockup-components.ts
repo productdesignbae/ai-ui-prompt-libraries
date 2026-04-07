@@ -2,13 +2,7 @@
 type ModuleMap = Record<string, () => Promise<Record<string, unknown>>>;
 export const modules: ModuleMap = {
   "./components/mockups/ui-prompts-library/AppleGlass.tsx": () => import("../components/mockups/ui-prompts-library/AppleGlass.tsx"),
-  "./components/mockups/ui-prompts-library/BrutalistRaw.tsx": () => import("../components/mockups/ui-prompts-library/BrutalistRaw.tsx"),
-  "./components/mockups/ui-prompts-library/ClaudeStyle.tsx": () => import("../components/mockups/ui-prompts-library/ClaudeStyle.tsx"),
-  "./components/mockups/ui-prompts-library/CyberpunkNeon.tsx": () => import("../components/mockups/ui-prompts-library/CyberpunkNeon.tsx"),
   "./components/mockups/ui-prompts-library/DiscordStyle.tsx": () => import("../components/mockups/ui-prompts-library/DiscordStyle.tsx"),
   "./components/mockups/ui-prompts-library/LinearStyle.tsx": () => import("../components/mockups/ui-prompts-library/LinearStyle.tsx"),
-  "./components/mockups/ui-prompts-library/NotionOpenCode.tsx": () => import("../components/mockups/ui-prompts-library/NotionOpenCode.tsx"),
-  "./components/mockups/ui-prompts-library/RetroTerminal.tsx": () => import("../components/mockups/ui-prompts-library/RetroTerminal.tsx"),
-  "./components/mockups/ui-prompts-library/SketchyPixel.tsx": () => import("../components/mockups/ui-prompts-library/SketchyPixel.tsx"),
-  "./components/mockups/ui-prompts-library/VercelMinimal.tsx": () => import("../components/mockups/ui-prompts-library/VercelMinimal.tsx")
+  "./components/mockups/ui-prompts-library/NotionOpenCode.tsx": () => import("../components/mockups/ui-prompts-library/NotionOpenCode.tsx")
 };
