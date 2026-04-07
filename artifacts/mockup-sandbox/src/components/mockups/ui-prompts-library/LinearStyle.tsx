@@ -1,461 +1,155 @@
-import React, { useState } from "react";
-import { Search, Copy, Check, Command, ArrowUp, Sparkles, Box, FileText, BarChart, Code, Library, Terminal } from "lucide-react";
+import React, { useState } from 'react';
+import { Search, Copy, CheckCircle2 } from 'lucide-react';
 
-const PROMPTS = [
-  {
-    id: 1,
-    title: "System Architect Persona",
-    description: "Act as a principal systems architect to design scalable, fault-tolerant microservices.",
-    category: "Coding",
-    icon: Code,
-    tags: ["architecture", "backend"],
-  },
-  {
-    id: 2,
-    title: "Socratic Teacher",
-    description: "Guides the user to the answer through continuous questioning rather than giving direct solutions.",
-    category: "Creative",
-    icon: Sparkles,
-    tags: ["education", "teaching"],
-  },
-  {
-    id: 3,
-    title: "Data Trend Analyzer",
-    description: "Analyze datasets to identify emerging trends, anomalies, and actionable business insights.",
-    category: "Analysis",
-    icon: BarChart,
-    tags: ["data", "business"],
-  },
-  {
-    id: 4,
-    title: "Technical Docs Writer",
-    description: "Convert messy code files into clean, structured markdown documentation.",
-    category: "Writing",
-    icon: FileText,
-    tags: ["docs", "markdown"],
-  },
-  {
-    id: 5,
-    title: "Competitor Analysis Matrix",
-    description: "Build a feature-by-feature comparison matrix against top industry competitors.",
-    category: "Research",
-    icon: Library,
-    tags: ["strategy", "market"],
-  },
-  {
-    id: 6,
-    title: "React Performance Auditor",
-    description: "Review React component code for unnecessary re-renders and memory leaks.",
-    category: "Coding",
-    icon: Terminal,
-    tags: ["react", "frontend"],
-  },
+const PROMPTS_DATA = [
+  { id:1, title:"Component Audit", type:"Both", tags:["a11y","review"], desc:"Audit this UI component for accessibility, responsiveness, and visual hierarchy. List issues by severity with a specific fix for each." },
+  { id:2, title:"Color System from Brand", type:"Design", tags:["tokens","color"], desc:"Generate a full UI color system from this hex: [HEX]. Include primary, secondary, neutrals, semantic states, and light/dark mode tokens." },
+  { id:3, title:"Responsive Layout Scaffold", type:"Dev", tags:["css","grid"], desc:"Write a responsive CSS grid layout for a [dashboard / landing / settings] page. Modern CSS only, no frameworks, fully annotated." },
+  { id:4, title:"Micro-interaction Spec", type:"Design", tags:["motion","ux"], desc:"Write a micro-interaction spec for [button / modal / toast]. Include trigger, animation curve, duration in ms, and accessible fallback." },
+  { id:5, title:"Figma to Tailwind", type:"Dev", tags:["figma","tailwind"], desc:"Convert Figma design tokens and spacing notes into Tailwind CSS config values. Include color, font, spacing, and shadow tokens." },
+  { id:6, title:"Design Critique", type:"Design", tags:["critique","ux"], desc:"Critique this UI screenshot like a senior product designer. Focus on hierarchy, whitespace, and clarity. Flag the top 3 issues with specific fixes." },
+  { id:7, title:"Component Props API", type:"Dev", tags:["typescript","api"], desc:"Design the TypeScript props interface for a React component. Include variants, sizes, disabled state, and full accessibility props." },
+  { id:8, title:"Error State Copy", type:"Both", tags:["copy","ux"], desc:"Write user-friendly error messages for: empty, failed to load, no results, permission denied, server error. Max 12 words each." },
+  { id:9, title:"Dark Mode Token Map", type:"Dev", tags:["tokens","dark"], desc:"Given this light mode color token set, generate dark mode equivalents. Maintain contrast ratios above 4.5:1. Use oklch()." },
+  { id:10, title:"Onboarding Flow Outline", type:"Design", tags:["ux","flow"], desc:"Outline a 5-step onboarding flow for [product type]. For each: goal, user action, screen description, copy direction, success state." },
+  { id:11, title:"Icon Set Brief", type:"Design", tags:["icons","brand"], desc:"Write a design brief for a custom icon set. Cover style, stroke weight, grid size, corner radius, and naming conventions." },
+  { id:12, title:"Storybook Scaffold", type:"Dev", tags:["storybook","docs"], desc:"Write Storybook stories for [component] with Default, Hover, Loading, Error, Empty, and Disabled states. Include ally addon config." },
+  { id:13, title:"Animation Timing System", type:"Both", tags:["motion","tokens"], desc:"Create a motion timing system with 4 duration tokens and easing curves for appear, exit, transition, and feedback. Output as CSS vars." },
+  { id:14, title:"Skeleton Loader Markup", type:"Dev", tags:["css","loading"], desc:"Write HTML + CSS for a skeleton loader matching this layout. CSS animation keyframes only, no JavaScript required." },
+  { id:15, title:"A/B Test Variant Ideas", type:"Both", tags:["growth","testing"], desc:"Suggest 3 A/B test variants for this [CTA / hero / form]. For each: hypothesis, the exact change, and the primary metric to track." },
+  { id:16, title:"Spacing Scale", type:"Design", tags:["tokens","spacing"], desc:"Generate a spacing scale with a 4px base unit. Name tokens semantically (xs → 2xl) and explain the rationale for each step." },
+  { id:17, title:"Typography Ramp", type:"Design", tags:["type","tokens"], desc:"Create a 6-level type ramp: display, h1, h2, h3, body, caption. Specify size, weight, line-height as Tailwind classes and CSS vars." },
+  { id:18, title:"Accessibility Audit", type:"Both", tags:["a11y","wcag"], desc:"Audit this component for WCAG 2.1 AA compliance. Check color contrast, keyboard navigation, ARIA roles, focus management, screen reader." },
 ];
 
-// Category pill positions around the orb (angle in degrees, radius offset)
-const CATEGORY_PILLS = [
-  { label: "Writing",  angle: -90,  rx: 155, ry: 120 },
-  { label: "Coding",   angle: -25,  rx: 165, ry: 120 },
-  { label: "Research", angle:  35,  rx: 160, ry: 120 },
-  { label: "Analysis", angle:  90,  rx: 155, ry: 120 },
-  { label: "Creative", angle: 150,  rx: 162, ry: 120 },
-  { label: "All",      angle: 210,  rx: 155, ry: 120 },
+const ORBIT_CATEGORIES = [
+  { id:"all", label:"All", angle:0, r:155, color:"#a78bfa" },
+  { id:"Design", label:"Design", angle:65, r:175, color:"#60a5fa" },
+  { id:"Dev", label:"Dev", angle:115, r:160, color:"#34d399" },
+  { id:"Both", label:"Both", angle:180, r:168, color:"#f472b6" },
 ];
 
-// Generate star dots positioned in a halo ring
-const STARS = Array.from({ length: 28 }, (_, i) => {
-  const angle = (i / 28) * 360 + (i % 3) * 7;
-  const r = 130 + (i % 5) * 8;
-  const rad = (angle * Math.PI) / 180;
-  return {
-    x: Math.cos(rad) * r,
-    y: Math.sin(rad) * r,
-    size: i % 4 === 0 ? 2.5 : 1.5,
-    opacity: 0.3 + (i % 3) * 0.2,
-  };
-});
+const TYPE_COLORS: Record<string, string> = { Design:"#60a5fa", Dev:"#34d399", Both:"#f472b6" };
 
 export function LinearStyle() {
-  const [activeCategory, setActiveCategory] = useState("All");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState<string>("all");
   const [copiedId, setCopiedId] = useState<number | null>(null);
-  const [inputVal, setInputVal] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredPrompts = PROMPTS.filter((p) => {
-    const matchesSearch =
-      p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = activeCategory === "All" || p.category === activeCategory;
-    return matchesSearch && matchesCategory;
+  const handleCopy = (id: number) => { setCopiedId(id); setTimeout(() => setCopiedId(null), 2000); };
+
+  const filtered = PROMPTS_DATA.filter(p => {
+    const catMatch = activeCategory === "all" || p.type === activeCategory;
+    const searchMatch = !searchQuery || p.title.toLowerCase().includes(searchQuery.toLowerCase()) || p.desc.toLowerCase().includes(searchQuery.toLowerCase());
+    return catMatch && searchMatch;
   });
 
-  const handleCopy = (id: number) => {
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
-
   return (
-    <div
-      className="min-h-screen font-sans overflow-hidden"
-      style={{ background: "#080808", color: "#ededed" }}
-    >
+    <div className="w-full h-screen overflow-hidden flex font-sans relative"
+      style={{ background:"linear-gradient(135deg,#0a0014 0%,#03001a 50%,#00070d 100%)" }}>
       <style>{`
-        @keyframes orbFloat {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.015); }
-        }
-        @keyframes nebulaGlow {
-          0%, 100% { opacity: 0.55; }
-          50% { opacity: 0.75; }
-        }
-        @keyframes starTwinkle {
-          0%, 100% { opacity: 0.3; }
-          50% { opacity: 0.9; }
-        }
-        @keyframes pillFloat {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-4px); }
-        }
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(12px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .orb-container { animation: orbFloat 5s ease-in-out infinite; }
-        .nebula { animation: nebulaGlow 4s ease-in-out infinite; }
-        .star-dot { animation: starTwinkle 2s ease-in-out infinite; }
-        .pill-float { animation: pillFloat 3.5s ease-in-out infinite; }
-        .card-fade { animation: fadeUp 0.35s ease both; }
-        .card-item {
-          background: rgba(255,255,255,0.03);
-          border: 1px solid rgba(255,255,255,0.07);
-          transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
-        }
-        .card-item:hover {
-          background: rgba(255,255,255,0.055);
-          border-color: rgba(255,255,255,0.14);
-          box-shadow: 0 0 0 1px rgba(99,102,241,0.15), 0 4px 24px rgba(0,0,0,0.4);
-        }
-        .glow-pill {
-          border: 1px solid rgba(255,255,255,0.2);
-          background: rgba(15,15,20,0.85);
-          backdrop-filter: blur(8px);
-          transition: all 0.2s;
-          box-shadow: 0 0 10px rgba(255,255,255,0.04), inset 0 0 8px rgba(255,255,255,0.02);
-        }
-        .glow-pill:hover {
-          border-color: rgba(255,255,255,0.45);
-          box-shadow: 0 0 16px rgba(120,120,255,0.3), inset 0 0 8px rgba(120,120,255,0.08);
-        }
-        .glow-pill.active {
-          border-color: rgba(200,200,255,0.7);
-          background: rgba(30,30,60,0.9);
-          box-shadow: 0 0 18px rgba(120,120,255,0.5), inset 0 0 12px rgba(100,100,255,0.15);
-          color: #fff;
-        }
-        .wave-path {
-          fill: none;
-          stroke: rgba(255,255,255,0.55);
-          stroke-width: 1;
-        }
-        .search-input {
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.08);
-          transition: border-color 0.2s;
-        }
-        .search-input:focus {
-          outline: none;
-          border-color: rgba(99,102,241,0.4);
-        }
-        .chat-input {
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.1);
-          transition: border-color 0.2s;
-        }
-        .chat-input:focus { outline: none; border-color: rgba(255,255,255,0.2); }
+        @keyframes starField { 0%,100%{opacity:0.35} 50%{opacity:0.65} }
+        .orbit-pill:hover { transform:translate(-50%,-50%) scale(1.12)!important; filter:brightness(1.3); }
+        .prompt-row { transition:background 0.15s; border-bottom:1px solid rgba(255,255,255,0.04); }
+        .prompt-row:hover { background:rgba(255,255,255,0.05)!important; }
+        .glass-input { background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);outline:none;color:rgba(255,255,255,0.85); }
+        .glass-input:focus { border-color:rgba(139,92,246,0.4);box-shadow:0 0 0 3px rgba(139,92,246,0.1); }
       `}</style>
 
-      {/* Header */}
-      <div className="flex items-center justify-between px-8 pt-7 pb-4">
-        <div className="flex items-center gap-3">
-          <div
-            className="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium"
-            style={{ border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.5)" }}
-          >
-            <Box size={12} />
-            UI Prompts Library
-            <span className="w-1 h-1 rounded-full" style={{ background: "#6366f1" }} />
-            v2.0
-          </div>
+      {/* Orb panel */}
+      <div className="w-72 h-full shrink-0 flex items-center justify-center relative overflow-hidden border-r border-white/5">
+        <svg width="280" height="400" viewBox="0 0 280 400" style={{ position:"absolute",inset:0,width:"100%",height:"100%" }}>
+          <defs>
+            <radialGradient id="nebulaG" cx="50%" cy="50%">
+              <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.4" />
+              <stop offset="55%" stopColor="#6366f1" stopOpacity="0.15" />
+              <stop offset="100%" stopColor="#0a0014" stopOpacity="0" />
+            </radialGradient>
+            <radialGradient id="orbG" cx="38%" cy="32%">
+              <stop offset="0%" stopColor="#c4b5fd" stopOpacity="0.95" />
+              <stop offset="50%" stopColor="#8b5cf6" stopOpacity="0.75" />
+              <stop offset="100%" stopColor="#4f46e5" stopOpacity="0.85" />
+            </radialGradient>
+          </defs>
+          {[200,175,150,125,100,75,50].map((r,i) => (
+            <ellipse key={r} cx="140" cy="200" rx={r} ry={r*0.55} fill="none" stroke={`rgba(124,92,255,${0.03+i*0.012})`} strokeWidth="1" />
+          ))}
+          <ellipse cx="140" cy="200" rx="200" ry="170" fill="url(#nebulaG)" />
+          {[[35,55],[215,85],[65,135],[195,155],[45,255],[225,295],[105,45],[165,335],[255,195],[18,205]].map(([x,y],i) => (
+            <circle key={i} cx={x} cy={y} r={i%3===0?1.5:1} fill="white" opacity={0.3+i*0.04} style={{ animation:`starField ${2+i*0.4}s ease-in-out infinite`,animationDelay:`${i*0.25}s` }} />
+          ))}
+          <circle cx="140" cy="200" r="108" fill="url(#orbG)" opacity="0.82" />
+          <circle cx="140" cy="200" r="108" fill="none" stroke="rgba(196,181,253,0.2)" strokeWidth="1.5" />
+          <ellipse cx="140" cy="200" rx="128" ry="20" fill="none" stroke="rgba(167,139,250,0.18)" strokeWidth="1" />
+        </svg>
+        <div className="relative z-10 text-center" style={{ transform:"translate(0,10px)" }}>
+          <div className="text-3xl font-black tracking-tighter" style={{ color:"#f5f3ff",textShadow:"0 0 28px rgba(167,139,250,0.8)" }}>BRAIN</div>
+          <div className="text-xs font-bold tracking-[0.22em] uppercase" style={{ color:"rgba(196,181,253,0.65)",marginTop:"2px" }}>ORBIT</div>
+          <div className="text-[10px] mt-2" style={{ color:"rgba(196,181,253,0.38)" }}>{filtered.length} / {PROMPTS_DATA.length}</div>
         </div>
-        <div className="relative group">
-          <Search
-            size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2"
-            style={{ color: "rgba(255,255,255,0.3)" }}
-          />
-          <input
-            type="text"
-            placeholder="Search prompts..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="search-input pl-9 pr-10 py-2 text-sm rounded-lg w-[220px]"
-            style={{ color: "#ededed" }}
-          />
-          <div
-            className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-mono"
-            style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.3)", border: "1px solid rgba(255,255,255,0.06)" }}
-          >
-            <Command size={10} />K
-          </div>
-        </div>
+        {ORBIT_CATEGORIES.map(cat => {
+          const rad = (cat.angle * Math.PI) / 180;
+          const cx = 140 + cat.r * Math.cos(rad);
+          const cy = 200 + cat.r * 0.55 * Math.sin(rad);
+          return (
+            <button key={cat.id} className="orbit-pill" onClick={() => setActiveCategory(cat.id)}
+              style={{ position:"absolute",left:`${(cx/280)*100}%`,top:`${(cy/400)*100}%`,transform:"translate(-50%,-50%)",background:activeCategory===cat.id?cat.color:"rgba(255,255,255,0.06)",border:`1px solid ${activeCategory===cat.id?cat.color:"rgba(255,255,255,0.12)"}`,color:activeCategory===cat.id?"#06060a":"rgba(255,255,255,0.7)",fontSize:"10px",fontWeight:700,padding:"4px 10px",borderRadius:"100px",cursor:"pointer",letterSpacing:"0.04em",whiteSpace:"nowrap",transition:"all 0.2s",zIndex:20 }}>
+              {cat.label}
+            </button>
+          );
+        })}
       </div>
 
-      {/* NeuroAstro Orb Hero */}
-      <div className="relative flex items-center justify-center" style={{ height: "340px" }}>
-        {/* Nebula background glow */}
-        <div
-          className="nebula absolute rounded-full pointer-events-none"
-          style={{
-            width: "340px", height: "340px",
-            background: "radial-gradient(circle, rgba(60,80,200,0.22) 0%, rgba(40,60,160,0.14) 35%, transparent 70%)",
-          }}
-        />
-        <div
-          className="absolute rounded-full pointer-events-none"
-          style={{
-            width: "200px", height: "200px",
-            background: "radial-gradient(circle, rgba(100,120,255,0.12) 0%, transparent 70%)",
-          }}
-        />
-
-        {/* Orb + stars container */}
-        <div className="orb-container relative flex items-center justify-center" style={{ width: "260px", height: "260px" }}>
-
-          {/* Star halo dots */}
-          {STARS.map((star, i) => (
-            <div
-              key={i}
-              className="star-dot absolute rounded-full bg-white"
-              style={{
-                width: `${star.size}px`,
-                height: `${star.size}px`,
-                left: `calc(50% + ${star.x}px - ${star.size / 2}px)`,
-                top: `calc(50% + ${star.y}px - ${star.size / 2}px)`,
-                opacity: star.opacity,
-                animationDelay: `${(i * 0.15) % 2}s`,
-              }}
-            />
-          ))}
-
-          {/* Outer dashed orbit ring */}
-          <div
-            className="absolute rounded-full pointer-events-none"
-            style={{
-              width: "260px", height: "260px",
-              border: "1px dashed rgba(255,255,255,0.08)",
-            }}
-          />
-
-          {/* Main orb */}
-          <div
-            className="absolute rounded-full overflow-hidden"
-            style={{
-              width: "200px", height: "200px",
-              background: "radial-gradient(circle at 50% 50%, #0a0a14 0%, #050508 100%)",
-              boxShadow: "0 0 0 1px rgba(255,255,255,0.12), 0 0 40px rgba(60,80,220,0.3), inset 0 0 30px rgba(40,60,180,0.15)",
-            }}
-          >
-            {/* SVG concentric topographic wave lines */}
-            <svg viewBox="0 0 200 200" width="200" height="200" style={{ position: "absolute", inset: 0 }}>
-              {/* Outer waves */}
-              <ellipse cx="100" cy="108" rx="88" ry="72" className="wave-path" style={{ opacity: 0.25 }} />
-              <ellipse cx="100" cy="108" rx="76" ry="62" className="wave-path" style={{ opacity: 0.3 }} />
-              {/* Mid waves - organic flowing shapes using paths */}
-              <path
-                d="M 30 110 Q 50 70 100 75 Q 150 80 172 115 Q 155 155 100 158 Q 45 162 30 110 Z"
-                className="wave-path"
-                style={{ opacity: 0.4 }}
-              />
-              <path
-                d="M 46 110 Q 62 82 100 86 Q 138 90 156 112 Q 143 142 100 145 Q 57 148 46 110 Z"
-                className="wave-path"
-                style={{ opacity: 0.5 }}
-              />
-              <path
-                d="M 60 110 Q 72 92 100 95 Q 128 98 142 112 Q 132 134 100 136 Q 68 138 60 110 Z"
-                className="wave-path"
-                style={{ opacity: 0.6 }}
-              />
-              <path
-                d="M 72 110 Q 80 100 100 102 Q 120 104 128 112 Q 121 126 100 128 Q 79 130 72 110 Z"
-                className="wave-path"
-                style={{ opacity: 0.75 }}
-              />
-              {/* Innermost shape */}
-              <path
-                d="M 84 110 Q 88 104 100 105 Q 112 106 116 112 Q 112 120 100 121 Q 88 122 84 110 Z"
-                className="wave-path"
-                style={{ opacity: 0.9 }}
-              />
-              {/* Blue glow fill in centre */}
-              <ellipse cx="100" cy="112" rx="30" ry="24" fill="rgba(60,100,255,0.18)" />
-              <ellipse cx="100" cy="112" rx="18" ry="14" fill="rgba(80,120,255,0.25)" />
-            </svg>
-
-            {/* Center label */}
-            <div
-              className="absolute inset-0 flex flex-col items-center justify-center text-center"
-              style={{ paddingTop: "8px" }}
-            >
-              <p className="text-xs font-light leading-snug" style={{ color: "rgba(255,255,255,0.7)", letterSpacing: "0.04em" }}>
-                Select<br />Sphere
-              </p>
+      {/* Right panel */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="px-6 pt-5 pb-4 shrink-0" style={{ borderBottom:"1px solid rgba(255,255,255,0.05)" }}>
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h1 className="text-lg font-bold text-white tracking-tight">Shiuli's Brain Orbit</h1>
+              <p className="text-xs" style={{ color:"rgba(255,255,255,0.35)" }}>NeuroAstro · {PROMPTS_DATA.length} prompts</p>
             </div>
           </div>
-
-          {/* Floating category pills positioned around the orb */}
-          {CATEGORY_PILLS.map(({ label, angle, rx, ry }, i) => {
-            const rad = (angle * Math.PI) / 180;
-            const x = Math.cos(rad) * rx;
-            const y = Math.sin(rad) * ry;
-            const isActive = activeCategory === label;
-            return (
-              <button
-                key={label}
-                onClick={() => setActiveCategory(label)}
-                className={`pill-float glow-pill absolute text-xs font-medium px-3.5 py-1.5 rounded-full cursor-pointer select-none ${isActive ? "active" : ""}`}
-                style={{
-                  left: `calc(50% + ${x}px)`,
-                  top: `calc(50% + ${y}px)`,
-                  transform: "translate(-50%, -50%)",
-                  color: isActive ? "#fff" : "rgba(255,255,255,0.7)",
-                  animationDelay: `${i * 0.25}s`,
-                  whiteSpace: "nowrap",
-                  zIndex: 10,
-                }}
-              >
-                {label}
-              </button>
-            );
-          })}
+          <div className="relative">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color:"rgba(255,255,255,0.3)" }} />
+            <input type="text" placeholder="Search prompts..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+              className="glass-input w-full pl-9 pr-3 py-2 text-xs rounded-lg" />
+          </div>
         </div>
-      </div>
 
-      {/* Section label */}
-      <div className="px-8 mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h2 className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.6)" }}>
-            {activeCategory === "All" ? "All Prompts" : activeCategory}
-          </h2>
-          <span
-            className="text-[10px] px-2 py-0.5 rounded-full font-medium"
-            style={{ background: "rgba(99,102,241,0.15)", color: "#818cf8", border: "1px solid rgba(99,102,241,0.2)" }}
-          >
-            {filteredPrompts.length}
-          </span>
-        </div>
-        <span className="text-[10px] font-mono" style={{ color: "rgba(255,255,255,0.2)" }}>
-          sorted by relevance
-        </span>
-      </div>
-
-      {/* Prompt Cards */}
-      <div className="px-8 pb-4">
-        <div className="grid grid-cols-3 gap-3">
-          {filteredPrompts.map((prompt, i) => {
-            const Icon = prompt.icon;
-            return (
-              <div
-                key={prompt.id}
-                className="card-item card-fade rounded-xl p-4 flex flex-col"
-                style={{ minHeight: "170px", animationDelay: `${i * 50}ms` }}
-              >
-                <div className="flex items-center gap-2.5 mb-3">
-                  <div
-                    className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                    style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.15)" }}
-                  >
-                    <Icon size={14} style={{ color: "#818cf8" }} />
-                  </div>
-                  <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.3)" }}>
-                    {prompt.category}
-                  </span>
+        <div className="flex-1 overflow-y-auto px-3 py-2">
+          {filtered.map(p => (
+            <div key={p.id} className="prompt-row group flex items-start gap-3 px-3 py-3 rounded-xl cursor-default">
+              <div className="shrink-0 mt-0.5 w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold" style={{ background:`${TYPE_COLORS[p.type]}18`,border:`1px solid ${TYPE_COLORS[p.type]}35`,color:TYPE_COLORS[p.type] }}>{p.type[0]}</div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <span className="text-sm font-semibold text-white">{p.title}</span>
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background:`${TYPE_COLORS[p.type]}18`,color:TYPE_COLORS[p.type] }}>{p.type}</span>
                 </div>
-
-                <h3 className="text-sm font-medium mb-1.5 leading-tight" style={{ color: "rgba(255,255,255,0.88)" }}>
-                  {prompt.title}
-                </h3>
-                <p className="text-xs leading-relaxed flex-1 mb-3" style={{ color: "rgba(255,255,255,0.42)" }}>
-                  {prompt.description}
-                </p>
-
-                <div
-                  className="flex items-center justify-between pt-3"
-                  style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}
-                >
-                  <div className="flex gap-1.5 flex-wrap">
-                    {prompt.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="text-[9px] font-medium px-1.5 py-0.5 rounded"
-                        style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.28)" }}
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                  <button
-                    onClick={() => handleCopy(prompt.id)}
-                    className="w-7 h-7 rounded-md flex items-center justify-center transition-all"
-                    style={{
-                      background: copiedId === prompt.id ? "rgba(52,211,153,0.15)" : "rgba(255,255,255,0.05)",
-                      border: copiedId === prompt.id ? "1px solid rgba(52,211,153,0.3)" : "1px solid rgba(255,255,255,0.06)",
-                      color: copiedId === prompt.id ? "#34d399" : "rgba(255,255,255,0.45)",
-                    }}
-                  >
-                    {copiedId === prompt.id ? <Check size={12} /> : <Copy size={12} />}
-                  </button>
+                <p className="text-xs leading-relaxed" style={{ color:"rgba(255,255,255,0.4)" }}>{p.desc}</p>
+                <div className="flex gap-1.5 mt-1.5 flex-wrap">
+                  {p.tags.map(t => <span key={t} className="text-[9px] px-1.5 py-0.5 rounded" style={{ background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"rgba(255,255,255,0.32)" }}>{t}</span>)}
                 </div>
               </div>
-            );
-          })}
+              <button onClick={() => handleCopy(p.id)} className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg" style={{ background:"rgba(255,255,255,0.06)" }}>
+                {copiedId===p.id?<CheckCircle2 size={13} style={{ color:"#34d399" }} />:<Copy size={13} style={{ color:"rgba(255,255,255,0.4)" }} />}
+              </button>
+            </div>
+          ))}
+          {filtered.length===0 && (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Search size={24} style={{ color:"rgba(255,255,255,0.15)",marginBottom:"10px" }} />
+              <p className="text-sm" style={{ color:"rgba(255,255,255,0.3)" }}>No prompts match your search</p>
+            </div>
+          )}
         </div>
 
-        {filteredPrompts.length === 0 && (
-          <div
-            className="flex flex-col items-center justify-center py-16 text-center rounded-xl"
-            style={{ border: "1px dashed rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.01)" }}
-          >
-            <Search size={28} style={{ color: "rgba(255,255,255,0.15)", marginBottom: "12px" }} />
-            <p className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.5)" }}>No prompts found</p>
-            <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.25)" }}>Try selecting a different sphere above</p>
+        <div className="px-4 py-3 shrink-0" style={{ borderTop:"1px solid rgba(255,255,255,0.05)" }}>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.07)" }}>
+            <input placeholder="Search or ask about prompts..." className="flex-1 bg-transparent border-none outline-none text-xs" style={{ color:"rgba(255,255,255,0.55)" }} readOnly />
+            <div className="w-6 h-6 rounded flex items-center justify-center" style={{ background:"rgba(139,92,246,0.6)" }}>
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 9L9 1M9 1H4M9 1V6" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
+            </div>
           </div>
-        )}
-      </div>
-
-      {/* NeuroAstro-style chat input at bottom */}
-      <div className="px-8 pb-7 pt-2">
-        <div className="flex items-center gap-3">
-          <div className="flex-1 relative">
-            <input
-              type="text"
-              placeholder="What do you want to know?"
-              value={inputVal}
-              onChange={(e) => setInputVal(e.target.value)}
-              className="chat-input w-full py-3 px-4 text-sm rounded-2xl"
-              style={{ color: "#ededed" }}
-            />
-          </div>
-          <button
-            className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all"
-            style={{
-              background: inputVal ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.07)",
-              border: "1px solid rgba(255,255,255,0.12)",
-              boxShadow: inputVal ? "0 0 16px rgba(255,255,255,0.2)" : "none",
-            }}
-          >
-            <ArrowUp size={16} style={{ color: inputVal ? "#000" : "rgba(255,255,255,0.4)" }} />
-          </button>
         </div>
       </div>
     </div>

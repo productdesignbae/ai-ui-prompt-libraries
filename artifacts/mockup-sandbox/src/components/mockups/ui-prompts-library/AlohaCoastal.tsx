@@ -1,265 +1,214 @@
 import React, { useState } from "react";
-import { Search, Copy, Check, Plus, Heart, ChevronLeft, Bell, Play, Share2, ArrowUpRight } from "lucide-react";
+import { Search, Copy, Check, Plus, ArrowUpRight, Filter } from "lucide-react";
+
+const CATEGORIES = ["All", "Design", "Dev", "Both"];
 
 const PROMPTS = [
-  {
-    id: 1,
-    title: "Tone Adapter",
-    category: "Writing",
-    description: "Rewrite the following text to match a specific tone, from corporate professional to casual gen-z.",
-    date: "28 Dec 2025",
-    hue: "linear-gradient(135deg, #e8a8c8 0%, #c878a8 100%)",
-    textColor: "rgba(255,255,255,0.92)",
-  },
-  {
-    id: 2,
-    title: "React Refactor Expert",
-    category: "Coding",
-    description: "Analyze a React component and refactor for performance, readability, and modern hooks.",
-    date: "1 Jan 2026",
-    hue: "linear-gradient(135deg, #a8c8e8 0%, #78a8d8 100%)",
-    textColor: "rgba(255,255,255,0.92)",
-  },
-  {
-    id: 3,
-    title: "Data Insight Generator",
-    category: "Analysis",
-    description: "Extract actionable insights from a raw dataset and present in concise, bulleted format.",
-    date: "28 Dec 2025",
-    hue: "linear-gradient(135deg, #f5d0e0 0%, #e8b8cc 100%)",
-    textColor: "rgba(80,40,60,0.88)",
-  },
-  {
-    id: 4,
-    title: "World Builder",
-    category: "Creative",
-    description: "Generate a detailed backstory for a sci-fi city: economy, factions, and hidden secrets.",
-    date: "28 Dec 2025",
-    hue: "linear-gradient(135deg, #d8c8f0 0%, #b8a0e0 100%)",
-    textColor: "rgba(255,255,255,0.92)",
-  },
+  { id: 1, title: "Component Audit", type: "Both", tags: ["a11y", "review"], desc: "Audit this UI component for accessibility, responsiveness, and visual hierarchy. List issues by severity with a specific fix for each." },
+  { id: 2, title: "Color System from Brand", type: "Design", tags: ["tokens", "color"], desc: "Generate a full UI color system (primary, secondary, neutrals, semantic states) from this hex: [HEX]. Include light and dark mode tokens with usage rules." },
+  { id: 3, title: "Responsive Layout Scaffold", type: "Dev", tags: ["css", "grid"], desc: "Write a responsive CSS grid layout for a [dashboard / landing / settings] page. Modern CSS only, no frameworks, fully annotated." },
+  { id: 4, title: "Micro-interaction Spec", type: "Design", tags: ["motion", "ux"], desc: "Write a micro-interaction spec for [button / modal / toast]. Include trigger, animation curve, duration in ms, and accessible fallback." },
+  { id: 5, title: "Figma to Tailwind", type: "Dev", tags: ["figma", "tailwind"], desc: "Convert these Figma design tokens and spacing notes into Tailwind CSS config values: [paste notes]. Include color, font, spacing, and shadow tokens." },
+  { id: 6, title: "Design Critique", type: "Design", tags: ["critique", "ux"], desc: "Critique this UI screenshot like a senior product designer. Focus on hierarchy, whitespace, and clarity. Flag the top 3 issues with specific fixes." },
+  { id: 7, title: "Component Props API", type: "Dev", tags: ["typescript", "api"], desc: "Design the TypeScript props interface for a [component name] React component. Include variants, sizes, disabled state, and full accessibility props." },
+  { id: 8, title: "Error State Copy", type: "Both", tags: ["copy", "ux"], desc: "Write user-friendly error messages for: empty, failed to load, no results, permission denied, server error. Max 12 words each. No technical jargon." },
+  { id: 9, title: "Dark Mode Token Map", type: "Dev", tags: ["tokens", "dark"], desc: "Given this light mode color token set, generate dark mode equivalents. Maintain contrast ratios above 4.5:1. Use oklch() for perceptual uniformity." },
+  { id: 10, title: "Onboarding Flow Outline", type: "Design", tags: ["ux", "flow"], desc: "Outline a 5-step onboarding flow for [product type]. For each step: goal, user action, screen description, copy direction, and success state." },
+  { id: 11, title: "Icon Set Brief", type: "Design", tags: ["icons", "brand"], desc: "Write a design brief for a custom icon set for [product type]. Cover style, stroke weight, grid size, corner radius, and naming conventions." },
+  { id: 12, title: "Storybook Scaffold", type: "Dev", tags: ["storybook", "testing"], desc: "Write Storybook stories for [component] with Default, Hover, Loading, Error, Empty, and Disabled states. Include ally addon config." },
+  { id: 13, title: "Animation Timing System", type: "Both", tags: ["motion", "tokens"], desc: "Create a motion timing system with 4 duration tokens and easing curves for appear, exit, transition, and feedback. Output as CSS custom properties." },
+  { id: 14, title: "Skeleton Loader Markup", type: "Dev", tags: ["css", "loading"], desc: "Write HTML + CSS for a skeleton loader matching this layout: [describe or paste layout]. CSS animation keyframes only, no JavaScript." },
+  { id: 15, title: "A/B Test Variant Ideas", type: "Both", tags: ["growth", "testing"], desc: "Suggest 3 A/B test variants for this [CTA / hero / form]. For each: hypothesis, the exact change, and the primary metric to track." },
+  { id: 16, title: "Spacing Scale", type: "Design", tags: ["tokens", "spacing"], desc: "Generate a spacing scale for [mobile / app / marketing site] with a 4px base unit. Name tokens semantically and explain the rationale for each step." },
+  { id: 17, title: "Typography Ramp", type: "Design", tags: ["type", "tokens"], desc: "Create a 6-level type ramp: display, h1, h2, h3, body, caption. Specify size, weight, line-height as Tailwind classes and CSS custom properties." },
+  { id: 18, title: "Accessibility Audit", type: "Both", tags: ["a11y", "wcag"], desc: "Audit this component for WCAG 2.1 AA compliance. Check color contrast, keyboard navigation, ARIA roles, focus management, and screen reader output." },
 ];
 
-const WAVEFORM_BARS = Array.from({ length: 36 }, (_, i) => {
-  const heights = [2,3,5,8,12,16,10,14,18,12,8,14,20,16,10,6,14,18,12,16,10,8,14,18,12,10,6,8,4,10,14,8,6,4,3,2];
-  return heights[i] || 4;
-});
+const TYPE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  Design: { bg: "#6b8f71", text: "#fff", border: "#5a7a60" },
+  Dev: { bg: "#4a8090", text: "#fff", border: "#3a7080" },
+  Both: { bg: "#c47260", text: "#fff", border: "#b46250" },
+};
 
 export function AlohaCoastal() {
-  const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [activeCategory, setActiveCategory] = useState("All");
   const [search, setSearch] = useState("");
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+
+  const filtered = PROMPTS.filter(
+    (p) =>
+      (activeCategory === "All" || p.type === activeCategory) &&
+      (p.title.toLowerCase().includes(search.toLowerCase()) ||
+        p.desc.toLowerCase().includes(search.toLowerCase()))
+  );
 
   const handleCopy = (id: number) => {
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const filtered = PROMPTS.filter(p =>
-    p.title.toLowerCase().includes(search.toLowerCase()) ||
-    p.description.toLowerCase().includes(search.toLowerCase())
-  );
-
   return (
-    <div
-      className="w-full min-h-screen font-sans overflow-hidden relative"
-      style={{ background: "linear-gradient(160deg, #f8d8e8 0%, #f0c8d8 40%, #e0b8d0 70%, #d8c8e8 100%)" }}
-    >
+    <div className="flex h-screen w-full font-sans overflow-hidden" style={{ background: "#f5f0e8", color: "#1a2530" }}>
       <style>{`
-        @keyframes float1 { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-12px) scale(1.03)} }
-        @keyframes float2 { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-8px) scale(1.02)} }
-        @keyframes fadein { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
-        .petal-blob-1 { animation: float1 8s ease-in-out infinite; }
-        .petal-blob-2 { animation: float2 10s ease-in-out infinite; }
-        .glass-white {
-          background: rgba(255,255,255,0.72);
-          backdrop-filter: blur(24px) saturate(1.6);
-          -webkit-backdrop-filter: blur(24px) saturate(1.6);
-          border: 1px solid rgba(255,255,255,0.9);
-          box-shadow: 0 4px 24px rgba(180,100,140,0.12), 0 1px 0 rgba(255,255,255,0.95) inset;
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600&display=swap');
+        .coastal-card {
+          background: rgba(255,255,255,0.9);
+          border: 1px solid rgba(106,143,113,0.15);
+          box-shadow: 0 2px 12px rgba(26,37,48,0.06);
+          transition: all 0.25s ease;
         }
-        .glass-light {
-          background: rgba(255,255,255,0.45);
-          backdrop-filter: blur(18px) saturate(1.4);
-          -webkit-backdrop-filter: blur(18px) saturate(1.4);
-          border: 1px solid rgba(255,255,255,0.7);
-          box-shadow: 0 2px 16px rgba(180,100,140,0.08);
+        .coastal-card:hover {
+          background: #fff;
+          border-color: rgba(106,143,113,0.35);
+          box-shadow: 0 6px 24px rgba(26,37,48,0.1);
+          transform: translateY(-2px);
         }
-        .glass-search {
-          background: rgba(255,255,255,0.55);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border: 1px solid rgba(255,255,255,0.8);
-          box-shadow: 0 2px 12px rgba(180,100,140,0.1);
+        .coastal-search {
+          background: rgba(255,255,255,0.75);
+          border: 1.5px solid rgba(106,143,113,0.25);
+          transition: all 0.2s;
         }
-        .glass-search:focus { outline:none; background: rgba(255,255,255,0.72); }
-        .card-fade { animation: fadein 0.35s ease both; }
-        .prompt-card {
-          transition: transform 0.25s, box-shadow 0.25s;
+        .coastal-search:focus {
+          outline: none;
+          background: #fff;
+          border-color: #6b8f71;
+          box-shadow: 0 0 0 3px rgba(107,143,113,0.12);
         }
-        .prompt-card:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 10px 32px rgba(180,80,140,0.2) !important;
-        }
+        .copy-btn { background: rgba(26,37,48,0.06); border: 1px solid rgba(26,37,48,0.12); transition: all 0.2s; }
+        .copy-btn:hover { background: rgba(26,37,48,0.12); transform: scale(1.05); }
+        .pill-active { background: #1a2530; color: #f5f0e8; border: 1.5px solid #1a2530; }
+        .pill-inactive { background: rgba(255,255,255,0.6); border: 1.5px solid rgba(26,37,48,0.15); color: rgba(26,37,48,0.6); transition: all 0.2s; }
+        .pill-inactive:hover { background: rgba(255,255,255,0.9); border-color: rgba(26,37,48,0.3); color: #1a2530; }
+        @keyframes fadein { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        .fade-in { animation: fadein 0.3s ease both; }
       `}</style>
 
-      {/* Bokeh petal blobs */}
+      {/* Sage color blob accents */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="petal-blob-1" style={{ position:"absolute", top:"-15%", left:"-10%", width:"65%", height:"65%", borderRadius:"40% 60% 55% 45%", background:"rgba(240,160,195,0.45)", filter:"blur(60px)" }} />
-        <div className="petal-blob-2" style={{ position:"absolute", top:"-5%", right:"-15%", width:"60%", height:"60%", borderRadius:"55% 45% 40% 60%", background:"rgba(210,140,200,0.38)", filter:"blur(70px)" }} />
-        <div className="petal-blob-1" style={{ position:"absolute", bottom:"-15%", left:"20%", width:"55%", height:"55%", borderRadius:"45% 55% 60% 40%", background:"rgba(220,170,215,0.35)", filter:"blur(65px)", animationDelay:"3s" }} />
-        <div className="petal-blob-2" style={{ position:"absolute", bottom:"5%", right:"-5%", width:"45%", height:"50%", borderRadius:"60% 40% 45% 55%", background:"rgba(180,150,220,0.3)", filter:"blur(55px)", animationDelay:"5s" }} />
-        <div style={{ position:"absolute", top:"35%", left:"30%", width:"40%", height:"45%", borderRadius:"50%", background:"rgba(250,200,225,0.25)", filter:"blur(50px)" }} />
+        <div style={{ position:"absolute", top:"-5%", right:"-5%", width:"45%", height:"45%", borderRadius:"50%", background:"rgba(107,143,113,0.12)", filter:"blur(80px)" }} />
+        <div style={{ position:"absolute", bottom:"-8%", left:"-5%", width:"50%", height:"50%", borderRadius:"50%", background:"rgba(196,114,96,0.1)", filter:"blur(90px)" }} />
+        <div style={{ position:"absolute", top:"40%", right:"10%", width:"30%", height:"30%", borderRadius:"50%", background:"rgba(74,128,144,0.1)", filter:"blur(70px)" }} />
       </div>
 
-      {/* Top bar */}
-      <div className="relative z-10 flex items-center justify-between px-8 pt-7 pb-2">
-        <div className="flex items-center gap-3">
-          <button className="glass-light w-8 h-8 rounded-full flex items-center justify-center">
-            <ChevronLeft size={14} style={{ color: "rgba(120,60,90,0.7)" }} />
-          </button>
-          <div className="glass-light flex items-center gap-2 px-4 py-1.5 rounded-full">
-            <div className="w-2 h-2 rounded-full" style={{ background: "#c87898" }} />
-            <span className="text-xs font-medium" style={{ color: "rgba(100,50,75,0.8)" }}>Pinned</span>
-            <ChevronLeft size={11} style={{ color: "rgba(120,60,90,0.5)", transform: "rotate(-90deg)" }} />
+      {/* Left sidebar */}
+      <aside className="relative z-10 w-64 shrink-0 h-full flex flex-col" style={{ borderRight: "1px solid rgba(26,37,48,0.1)", background: "rgba(245,240,232,0.8)", backdropFilter: "blur(8px)" }}>
+        {/* Logo */}
+        <div className="px-6 py-6" style={{ borderBottom: "1px solid rgba(26,37,48,0.08)" }}>
+          <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: "22px", color: "#1a2530", lineHeight: 1.1 }}>
+            Prompt<br/><span style={{ color: "#6b8f71" }}>Library.</span>
           </div>
+          <p style={{ fontSize: "11px", color: "rgba(26,37,48,0.45)", marginTop: "6px", letterSpacing: "0.04em" }}>Shiuli's Sage Edit · v2</p>
         </div>
-        <button className="glass-light w-8 h-8 rounded-full flex items-center justify-center">
-          <Bell size={13} style={{ color: "rgba(120,60,90,0.7)" }} />
-        </button>
-      </div>
 
-      {/* Hero section */}
-      <div className="relative z-10 px-8 pt-4 pb-3">
-        <p className="text-sm font-medium mb-2" style={{ color: "rgba(100,50,75,0.6)" }}>Sunday Morning</p>
-
-        {/* Voice note / audio player */}
-        <div className="glass-white rounded-2xl px-4 py-3 flex items-center gap-3 mb-2">
-          <button
-            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-            style={{ background: "rgba(200,120,152,0.15)", border: "1px solid rgba(200,120,152,0.3)" }}
-          >
-            <Play size={14} style={{ color: "#c87898" }} fill="#c87898" />
-          </button>
-          <div className="flex-1 flex items-center gap-0.5">
-            {WAVEFORM_BARS.map((h, i) => (
-              <div
-                key={i}
-                style={{
-                  width: "2px", height: `${h}px`,
-                  background: i < 14 ? "#c87898" : "rgba(180,100,130,0.25)",
-                  borderRadius: "1px",
-                  flexShrink: 0,
-                }}
-              />
-            ))}
-          </div>
-          <span className="text-[11px] font-medium shrink-0" style={{ color: "rgba(120,60,90,0.6)" }}>10:04</span>
-        </div>
-        <p className="text-xs mb-4" style={{ color: "rgba(120,60,90,0.5)" }}>Voice note: The sounds of the sea</p>
-      </div>
-
-      {/* Bento grid */}
-      <div className="relative z-10 px-8 pb-4">
-        <div className="grid grid-cols-2 gap-3">
-          {filtered.slice(0, 4).map((prompt, i) => (
-            <div
-              key={prompt.id}
-              className="prompt-card card-fade rounded-2xl overflow-hidden"
+        {/* Nav categories */}
+        <nav className="px-4 py-4 flex flex-col gap-1">
+          {[
+            { cat: "All", count: PROMPTS.length },
+            { cat: "Design", count: PROMPTS.filter(p => p.type === "Design").length },
+            { cat: "Dev", count: PROMPTS.filter(p => p.type === "Dev").length },
+            { cat: "Both", count: PROMPTS.filter(p => p.type === "Both").length },
+          ].map(({ cat, count }) => (
+            <button key={cat} onClick={() => setActiveCategory(cat)}
+              className="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left"
               style={{
-                background: prompt.hue,
-                minHeight: i % 3 === 0 ? "155px" : "135px",
-                animationDelay: `${i * 60}ms`,
-                boxShadow: "0 4px 20px rgba(180,80,130,0.15)",
-              }}
-            >
-              <div className="p-4 flex flex-col h-full">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider mb-0.5" style={{ color: "rgba(255,255,255,0.65)" }}>
-                      {prompt.category}
-                    </p>
-                    <h3 className="text-sm font-semibold leading-tight" style={{ color: prompt.textColor }}>
-                      {prompt.title}
-                    </h3>
-                  </div>
-                  <button
-                    onClick={() => handleCopy(prompt.id)}
-                    className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
-                    style={{ background: "rgba(255,255,255,0.25)", border: "1px solid rgba(255,255,255,0.4)" }}
-                  >
-                    {copiedId === prompt.id
-                      ? <Check size={10} style={{ color: "#fff" }} />
-                      : <Share2 size={9} style={{ color: "rgba(255,255,255,0.8)" }} />
-                    }
-                  </button>
-                </div>
-                <p className="text-[11px] leading-relaxed flex-1" style={{ color: i % 2 === 0 ? "rgba(255,255,255,0.75)" : "rgba(80,40,60,0.65)" }}>
-                  {prompt.description}
-                </p>
-                <div className="flex items-center justify-between mt-2">
-                  <p className="text-[10px]" style={{ color: i % 2 === 0 ? "rgba(255,255,255,0.5)" : "rgba(100,60,80,0.5)" }}>
-                    {prompt.date}
-                  </p>
-                  <button
-                    onClick={() => handleCopy(prompt.id)}
-                    className="flex items-center gap-1 text-[10px] font-medium"
-                    style={{ color: i % 2 === 0 ? "rgba(255,255,255,0.7)" : "rgba(100,60,80,0.65)" }}
-                  >
-                    {copiedId === prompt.id ? (
-                      <><Check size={10} />Copied</>
-                    ) : (
-                      <><Copy size={10} />Copy</>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
+                background: activeCategory === cat ? "#1a2530" : "transparent",
+                color: activeCategory === cat ? "#f5f0e8" : "rgba(26,37,48,0.55)",
+              }}>
+              <span>{cat === "All" ? "All Prompts" : cat === "Dev" ? "Development" : cat}</span>
+              <span style={{
+                fontSize: "11px", fontWeight: 600, padding: "1px 7px", borderRadius: "100px",
+                background: activeCategory === cat ? "rgba(255,255,255,0.15)" : "rgba(26,37,48,0.08)",
+                color: activeCategory === cat ? "rgba(245,240,232,0.8)" : "rgba(26,37,48,0.45)",
+              }}>{count}</span>
+            </button>
           ))}
-        </div>
-      </div>
+        </nav>
 
-      {/* Stats row */}
-      <div className="relative z-10 px-8 pb-3 flex items-center gap-5">
-        <div className="flex items-center gap-1.5">
-          <Heart size={13} style={{ color: "#c87898" }} fill="#c87898" />
-          <span className="text-xs font-medium" style={{ color: "rgba(120,60,90,0.65)" }}>5342</span>
-        </div>
-        <span className="text-xs" style={{ color: "rgba(120,60,90,0.4)" }}>·</span>
-        <span className="text-xs" style={{ color: "rgba(120,60,90,0.5)" }}>22 saved</span>
-        <span className="text-xs" style={{ color: "rgba(120,60,90,0.4)" }}>·</span>
-        <span className="text-xs" style={{ color: "rgba(120,60,90,0.5)" }}>14 shared</span>
-        <div className="ml-auto">
-          <button
-            className="glass-light flex items-center gap-1.5 px-3 py-1.5 rounded-full"
-          >
-            <ArrowUpRight size={12} style={{ color: "rgba(180,80,130,0.7)" }} />
-            <span className="text-[11px] font-medium" style={{ color: "rgba(120,60,90,0.7)" }}>Expand</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Search bar */}
-      <div className="relative z-10 px-8 pb-8">
-        <div className="flex items-center gap-2">
-          <div className="flex-1 relative">
-            <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: "rgba(160,90,120,0.5)" }} />
-            <input
-              type="text"
-              placeholder="Find a memory..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="glass-search w-full pl-11 pr-4 py-3 rounded-2xl text-sm"
-              style={{ color: "rgba(100,50,75,0.85)" }}
-            />
+        {/* Stats */}
+        <div className="mt-auto px-4 pb-6">
+          <div className="rounded-2xl p-4" style={{ background: "rgba(107,143,113,0.12)", border: "1px solid rgba(107,143,113,0.2)" }}>
+            <p style={{ fontSize: "10px", letterSpacing: "0.08em", textTransform: "uppercase", color: "#6b8f71", fontWeight: 600 }}>Library Stats</p>
+            <p style={{ fontSize: "22px", fontWeight: 300, color: "#1a2530", fontFamily: "'DM Serif Display', serif", marginTop: "4px" }}>{PROMPTS.length}<span style={{ fontSize: "12px", marginLeft: "4px", color: "rgba(26,37,48,0.5)" }}>prompts</span></p>
+            <div className="flex gap-4 mt-2">
+              {[{ label: "Design", val: 8 }, { label: "Dev", val: 6 }, { label: "Both", val: 4 }].map(({ label, val }) => (
+                <div key={label}>
+                  <p style={{ fontSize: "16px", fontWeight: 500, color: "#1a2530" }}>{val}</p>
+                  <p style={{ fontSize: "10px", color: "rgba(26,37,48,0.4)" }}>{label}</p>
+                </div>
+              ))}
+            </div>
           </div>
-          <button
-            className="glass-white w-11 h-11 rounded-full flex items-center justify-center shrink-0"
-            style={{ border: "1px solid rgba(255,255,255,0.9)" }}
-          >
-            <Plus size={18} style={{ color: "rgba(180,80,130,0.8)" }} />
+        </div>
+      </aside>
+
+      {/* Main */}
+      <main className="relative z-10 flex-1 flex flex-col overflow-hidden">
+        {/* Top bar */}
+        <div className="px-8 py-5 flex items-center gap-4" style={{ borderBottom: "1px solid rgba(26,37,48,0.08)", background: "rgba(245,240,232,0.6)", backdropFilter: "blur(8px)" }}>
+          <div className="flex-1 relative">
+            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: "rgba(26,37,48,0.4)" }} />
+            <input type="text" placeholder="Search prompts..." value={search} onChange={(e) => setSearch(e.target.value)}
+              className="coastal-search w-full pl-10 pr-4 py-2.5 rounded-xl text-sm" style={{ color: "#1a2530" }} />
+          </div>
+          <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium" style={{ background: "#6b8f71", color: "#fff", border: "none", cursor: "pointer" }}>
+            <Plus size={14} /> New Prompt
           </button>
         </div>
-      </div>
+
+        {/* Page title */}
+        <div className="px-8 pt-6 pb-4">
+          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: "28px", color: "#1a2530", letterSpacing: "-0.02em", margin: 0 }}>
+            {activeCategory === "All" ? "All Prompts" : activeCategory === "Dev" ? "Development" : activeCategory}
+          </h1>
+          <p style={{ fontSize: "12px", color: "rgba(26,37,48,0.45)", marginTop: "4px" }}>
+            {filtered.length} of {PROMPTS.length} prompts · sorted by relevance
+          </p>
+        </div>
+
+        {/* Cards grid */}
+        <div className="flex-1 overflow-y-auto px-8 pb-8">
+          <div className="grid grid-cols-2 gap-4">
+            {filtered.map((p, i) => {
+              const tc = TYPE_COLORS[p.type];
+              return (
+                <div key={p.id} className="coastal-card fade-in rounded-2xl p-5 flex flex-col gap-3" style={{ animationDelay: `${i * 30}ms` }}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold px-2.5 py-1 rounded-full" style={{ background: tc.bg, color: tc.text, border: `1px solid ${tc.border}` }}>{p.type}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button className="flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-lg transition-all"
+                        style={{ background: "rgba(107,143,113,0.1)", color: "#6b8f71", border: "1px solid rgba(107,143,113,0.2)", cursor: "pointer" }}>
+                        <ArrowUpRight size={10} /> Try it
+                      </button>
+                      <button onClick={() => handleCopy(p.id)} className="copy-btn w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer">
+                        {copiedId === p.id ? <Check size={13} style={{ color: "#6b8f71" }} /> : <Copy size={13} style={{ color: "rgba(26,37,48,0.5)" }} />}
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold mb-1.5" style={{ color: "#1a2530", lineHeight: 1.3 }}>{p.title}</h3>
+                    <p className="text-xs leading-relaxed" style={{ color: "rgba(26,37,48,0.55)" }}>{p.desc}</p>
+                  </div>
+                  <div className="flex gap-1.5 mt-auto flex-wrap">
+                    {p.tags.map((tag) => (
+                      <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                        style={{ background: "rgba(26,37,48,0.06)", color: "rgba(26,37,48,0.45)", border: "1px solid rgba(26,37,48,0.08)" }}>{tag}</span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {filtered.length === 0 && (
+            <div className="coastal-card rounded-2xl flex flex-col items-center justify-center py-16 text-center mt-4">
+              <Search size={24} style={{ color: "rgba(26,37,48,0.2)", marginBottom: "10px" }} />
+              <p className="text-sm font-medium" style={{ color: "rgba(26,37,48,0.4)" }}>No prompts found</p>
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 }
